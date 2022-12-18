@@ -35,8 +35,9 @@
 #ifdef __CYGWIN__
 #define strtold(a,b) ((long double)strtod((a),(b)))
 #endif
-
+// 这个文件中的主要内容是实现redis中的对象
 robj *createObject(int type, void *ptr) {
+    //这里这个o是从哪里来的 todo:@wjp，是因为c的执行顺序吗？到右边执行的时候，已经有了数据了？
     robj *o = zmalloc(sizeof(*o));
     o->type = type;
     o->encoding = REDIS_ENCODING_RAW;
@@ -50,6 +51,7 @@ robj *createObject(int type, void *ptr) {
 
 /* Create a string object with encoding REDIS_ENCODING_RAW, that is a plain
  * string object where o->ptr points to a proper sds string. */
+/* 使用REDIS_ENCODING_RAW编码创建一个字符串对象（普通字符串对象），o->ptr指针指向实际的sds string */
 robj *createRawStringObject(char *ptr, size_t len) {
     return createObject(REDIS_STRING,sdsnewlen(ptr,len));
 }
@@ -57,6 +59,8 @@ robj *createRawStringObject(char *ptr, size_t len) {
 /* Create a string object with encoding REDIS_ENCODING_EMBSTR, that is
  * an object where the sds string is actually an unmodifiable string
  * allocated in the same chunk as the object itself. */
+/* 使用REDIS_ENCODING_EMBSTR编码创建一个字符串对象。
+ * 这个对象中的SDS字符串实际上是一个不可修改的字符串，分配在与对象本身相同的块中 */
 robj *createEmbeddedStringObject(char *ptr, size_t len) {
     robj *o = zmalloc(sizeof(robj)+sizeof(struct sdshdr)+len+1);
     struct sdshdr *sh = (void*)(o+1);
@@ -84,6 +88,9 @@ robj *createEmbeddedStringObject(char *ptr, size_t len) {
  *
  * The current limit of 39 is chosen so that the biggest string object
  * we allocate as EMBSTR will still fit into the 64 byte arena of jemalloc. */
+/* 使用EMBSTR格式创建string对象(如果字符串长度要小于REIDS_ENCODING_EMBSTR_SIZE_LIMIT），否则的话使用RAW格式
+ * 当前选择39的限制是为了使分配为EMBSTR的最大字符串对象仍然适合jemalloc的64字节范围。
+ */
 #define REDIS_ENCODING_EMBSTR_SIZE_LIMIT 39
 robj *createStringObject(char *ptr, size_t len) {
     if (len <= REDIS_ENCODING_EMBSTR_SIZE_LIMIT)
@@ -115,6 +122,10 @@ robj *createStringObjectFromLongLong(long long value) {
  * and the output of snprintf() is not modified.
  *
  * The 'humanfriendly' option is used for INCRBYFLOAT and HINCRBYFLOAT. */
+/* 通过LongDouble创建一个字符串对象。处于对人使用更加友好的考虑,并没有使用指数格式表示，而是处理尾部的零。
+ * 然而，这个结果会影戏那个精度。否则将使用exp格式，并且不修改snprintf()的输出
+ * humanfriendly选项对于 INCRBYFLOAT 和 HINCRBYFLOAT 都可用。
+ */
 robj *createStringObjectFromLongDouble(long double value, int humanfriendly) {
     char buf[256];
     int len;
@@ -159,6 +170,11 @@ robj *createStringObjectFromLongDouble(long double value, int humanfriendly) {
  * will always result in a fresh object that is unshared (refcount == 1).
  *
  * The resulting object always has refcount set to 1. */
+/* 复制一个string对象（确保返回的结果和传入的对象的编码方式一致）
+ * 这个方法同时还保证在复制一个完整的小对象(或包含小整数表示形式的字符串对象)的时候会产生一个还没有被多处引用的的对象（refcount=1)
+ *
+ *  返回的对象的refcount被设置为1。
+ */
 robj *dupStringObject(robj *o) {
     robj *d;
 
@@ -467,6 +483,11 @@ robj *getDecodedObject(robj *o) {
  *
  * Important note: when REDIS_COMPARE_BINARY is used a binary-safe comparison
  * is used. */
+/* 比较两个字符串对象的时候是使用strcmp() or strcoll()取决于flags.
+ * 因为对象可以是整数编码的。所以我们使用ll2string()来获得堆栈上数字的字符串表示形式来比较，这要比调用getDecodedObject更快。
+ *
+ * 重点提示：当使用REDIS_COMPARE_BINARY时，使用二进制安全比较
+ */
 
 #define REDIS_COMPARE_BINARY (1<<0)
 #define REDIS_COMPARE_COLL (1<<1)
@@ -504,11 +525,13 @@ int compareStringObjectsWithFlags(robj *a, robj *b, int flags) {
 }
 
 /* Wrapper for compareStringObjectsWithFlags() using binary comparison. */
+/* 调用compareStringObjectsWithFlags使用二进制比较 */
 int compareStringObjects(robj *a, robj *b) {
     return compareStringObjectsWithFlags(a,b,REDIS_COMPARE_BINARY);
 }
 
 /* Wrapper for compareStringObjectsWithFlags() using collation. */
+/* 调用 compareStringObjectsWithFlags， 使用 strcoll进行比较 */
 int collateStringObjects(robj *a, robj *b) {
     return compareStringObjectsWithFlags(a,b,REDIS_COMPARE_COLL);
 }
@@ -517,6 +540,9 @@ int collateStringObjects(robj *a, robj *b) {
  * point of view of a string comparison, otherwise 0 is returned. Note that
  * this function is faster then checking for (compareStringObject(a,b) == 0)
  * because it can perform some more optimization. */
+/* 如果从字符串比较的角度来说两个对象一样的话返回1，否则返回0。
+ * 这个方法要比检查(compareStringObject(a,b) == 0)更快，因为这个里面可以进行更多的优化。
+ * */
 int equalStringObjects(robj *a, robj *b) {
     if (a->encoding == REDIS_ENCODING_INT &&
         b->encoding == REDIS_ENCODING_INT){
@@ -689,6 +715,7 @@ char *strEncoding(int encoding) {
 
 /* Given an object returns the min number of milliseconds the object was never
  * requested, using an approximated LRU algorithm. */
+/* 返回传入的对象的没有被请求的最少时间。使用近似的LRU算法 */
 unsigned long long estimateObjectIdleTime(robj *o) {
     unsigned long long lruclock = LRU_CLOCK();
     if (lruclock >= o->lru) {
@@ -701,6 +728,7 @@ unsigned long long estimateObjectIdleTime(robj *o) {
 
 /* This is a helper function for the OBJECT command. We need to lookup keys
  * without any modification of LRU or other parameters. */
+/* 对于OBJECT命令的帮助函数。我们需要在不修改LRU或其他参数的情况下查找键。 */
 robj *objectCommandLookup(redisClient *c, robj *key) {
     dictEntry *de;
 
@@ -717,6 +745,7 @@ robj *objectCommandLookupOrReply(redisClient *c, robj *key, robj *reply) {
 
 /* Object command allows to inspect the internals of an Redis Object.
  * Usage: OBJECT <refcount|encoding|idletime> <key> */
+/* OBJECT命令允许探测Redis对象的内部。用法:OBJECT <refcount|encoding|idletime> <key> */
 void objectCommand(redisClient *c) {
     robj *o;
 

@@ -30,7 +30,7 @@
 
 #ifndef __SDS_H
 #define __SDS_H
-
+// 在小于这个长度的时候，是通过*2的方式进行增长的，大于这个长度以后，直接加上一个这个长度。
 #define SDS_MAX_PREALLOC (1024*1024)
 
 #include <sys/types.h>
@@ -39,17 +39,20 @@
 typedef char *sds;
 
 struct sdshdr {
-    unsigned int len;
-    unsigned int free;
+    // sds头部的定义
+    unsigned int len;   //指向长度
+    unsigned int free;  //空闲空间的长度
     char buf[];
 };
 
 static inline size_t sdslen(const sds s) {
+    // 类似于操作系统中的链表的用法，通过编译器特点，获取到sds数据的头部
     struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
     return sh->len;
 }
 
 static inline size_t sdsavail(const sds s) {
+    // 类似上面获取已用长度，只是这里返回的是free字段
     struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));
     return sh->free;
 }
@@ -99,3 +102,10 @@ sds sdsRemoveFreeSpace(sds s);
 size_t sdsAllocSize(sds s);
 
 #endif
+
+/* __attribute__是GNU C的一个特性。
+ * __attribute__ 可以设置函数属性（Function Attribute ）、变量属性（Variable Attribute ）和类型属性（Type Attribute ）。
+ * __attribute__后面的括号里面的东西是其参数。对应结构体和共用体进行设置的时候，要从里面传递参数，这6个参数是：
+ *  aligned, packed, transparent_union, unused, deprecated 和 may_alias 。
+ *
+ */

@@ -29,6 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+// 一个简单的是回检驱动的程序库。早期的实现是为了Jim事件循环（一个Tcl解释器），后来用来作为lib以便重复使用。
 
 #include <stdio.h>
 #include <sys/time.h>
@@ -46,6 +47,7 @@
 
 /* Include the best multiplexing layer supported by this system.
  * The following should be ordered by performances, descending. */
+// 包含了这个系统最好的多路复用层。以下内容应按性能降序排列。
 #ifdef HAVE_EVPORT
 #include "ae_evport.c"
 #else
@@ -131,7 +133,13 @@ void aeDeleteEventLoop(aeEventLoop *eventLoop) {
 void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
-
+/* 创建IO事件
+     * eventLoop：循环流程结构体
+     * proc:事件处理回调函数
+     * fd:IO对应的文件描述符
+     * mask:事件类型掩码
+     * clientData:事件私有数据
+ * */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
@@ -252,6 +260,13 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
  *    Much better but still insertion or deletion of timers is O(N).
  * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
  */
+/* 搜索第一个定时器发射。如果没有找到的话就返回NULL
+ * 此操作有助于了解在不延迟任何事件的情况下，选择对象可以进入睡眠状态的时间。
+ *
+ * 注意，因为time events是没有排序的，所以这个操作是O(N)时间的。是一个可能的优化方向（对当前的版本的Redis够用）
+ * 1. 按照顺序插入时间，所以最近执行的就在头部，更好，但插入或删除计时器仍然是O(N)。
+ * 2. 使用一个skiplist来在O(1)的时间复杂度上执行这个操作，在O(log(N))时间复杂度上执行插入操作。
+ */
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;
@@ -268,6 +283,7 @@ static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 }
 
 /* Process time events */
+// 处理时间时间
 static int processTimeEvents(aeEventLoop *eventLoop) {
     int processed = 0;
     aeTimeEvent *te;
@@ -349,6 +365,16 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * the events that's possible to process without to wait are processed.
  *
  * The function returns the number of events processed. */
+/* 处理每个挂起的事件，然后每个挂起的文件事件如果没有特殊的标志的话就会继续睡眠；
+ * 如果有文件事件触发，或者（任何）下一个时间到达就会触发事件
+     * 如果flags=0，表示这个函数不做任何事情并直接返回
+     * 如果flags包括AE_ALL_EVENTS，所有类型的事件都会被处理
+     * 如果flags包括AE_FILE_EVENTS，文件事件会被处理
+     * 如果flags包括AE_DONT_WAIT，那么时间事件会被处理
+     * 如果flags包括AE_DONT_WAIT,直到所有的不需要等待的事件处理完就返回。
+ *
+ * 这个函数会返回被处理的事件的个数。
+ */
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
@@ -427,6 +453,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
 /* Wait for milliseconds until the given file descriptor becomes
  * writable/readable/exception */
+/* 等待milliseconds直到给出的文件描述符 可写/可读/异常 */
 int aeWait(int fd, int mask, long long milliseconds) {
     struct pollfd pfd;
     int retmask = 0, retval;
@@ -435,7 +462,7 @@ int aeWait(int fd, int mask, long long milliseconds) {
     pfd.fd = fd;
     if (mask & AE_READABLE) pfd.events |= POLLIN;
     if (mask & AE_WRITABLE) pfd.events |= POLLOUT;
-
+    // 这里调用了一下poll，看起来是一个c的公开的lib
     if ((retval = poll(&pfd, 1, milliseconds))== 1) {
         if (pfd.revents & POLLIN) retmask |= AE_READABLE;
         if (pfd.revents & POLLOUT) retmask |= AE_WRITABLE;

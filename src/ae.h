@@ -51,15 +51,21 @@
 #define AE_NOTUSED(V) ((void) V)
 
 struct aeEventLoop;
-
+/*在c语言中，回调是通过函数指针实现的。 通过将回调函数地址 传递给 被调函数，从而实现回调。
+ * 在这里，通过定义函数指针aeFileProc，由调用方实现具体的函数内容，在实际调用函数里，把aeFileProc实现函数的地址传进来。
+ * 其实相当于定义一种接口，由调用方来实现该接口
+ * /
 /* Types and data structures */
+// 下面的内容是为函数定义别名，这样所有类型的函数可以使用同一个指针，括号里面的是函数的参数格式
 typedef void aeFileProc(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask);
 typedef int aeTimeProc(struct aeEventLoop *eventLoop, long long id, void *clientData);
 typedef void aeEventFinalizerProc(struct aeEventLoop *eventLoop, void *clientData);
 typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 
 /* File event structure */
+// 文件事件格式
 typedef struct aeFileEvent {
+    // AE_(READABLE|WRITABLE)中的一个，就是两个宏定义的变量
     int mask; /* one of AE_(READABLE|WRITABLE) */
     aeFileProc *rfileProc;
     aeFileProc *wfileProc;
@@ -67,8 +73,11 @@ typedef struct aeFileEvent {
 } aeFileEvent;
 
 /* Time event structure */
+/* 事件事件格式 */
 typedef struct aeTimeEvent {
+    // 事件事件的id
     long long id; /* time event identifier. */
+    // 时间信息
     long when_sec; /* seconds */
     long when_ms; /* milliseconds */
     aeTimeProc *timeProc;
@@ -78,21 +87,29 @@ typedef struct aeTimeEvent {
 } aeTimeEvent;
 
 /* A fired event */
+/* 一个被触发的事件 */
 typedef struct aeFiredEvent {
     int fd;
     int mask;
 } aeFiredEvent;
 
 /* State of an event based program */
+/* 基于事件的程序的状态 */
 typedef struct aeEventLoop {
+    // 当前注册的最高文件描述符
     int maxfd;   /* highest file descriptor currently registered */
+    //所跟踪的文件描述符的最大数量
     int setsize; /* max number of file descriptors tracked */
     long long timeEventNextId;
+    // 用于检测系统时钟偏差
     time_t lastTime;     /* Used to detect system clock skew */
+    // 注册的事件
     aeFileEvent *events; /* Registered events */
+    // 被触发的事件
     aeFiredEvent *fired; /* Fired events */
     aeTimeEvent *timeEventHead;
     int stop;
+    // 这用于轮询特定于API的数据
     void *apidata; /* This is used for polling API specific data */
     aeBeforeSleepProc *beforesleep;
 } aeEventLoop;

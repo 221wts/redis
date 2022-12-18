@@ -120,7 +120,7 @@ static void zmalloc_default_oom(size_t size) {
 }
 
 static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
-
+// todo@wjp: redis zmalloc实现的目的与分析:https://zhuanlan.zhihu.com/p/38276637
 void *zmalloc(size_t size) {
     void *ptr = malloc(size+PREFIX_SIZE);
 

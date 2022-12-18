@@ -26,7 +26,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
+// 用于illumos事件端口的模块。
 
 #include <assert.h>
 #include <errno.h>
@@ -62,6 +62,10 @@ static int evport_debug = 0;
  * pending_masks.  (b) is only true for the last fds we returned from aeApiPoll,
  * and only until we enter aeApiPoll again (at which point we restore the
  * in-kernel association).
+ */
+/* 这个文件使用事件端口实现ae API，从Solaris 10开始就出现在基于Solaris的系统上。
+ * 使用事件端口接口，我们将文件描述符与端口关联起来。每个关联还包括消费者感兴趣的poll(2)事件集(例如POLLIN和POLLOUT)。
+ * 关于这个的实现，有一个技巧：当你通过aeApiPoll返回事件，相应的文件描述符与端口分离。
  */
 #define MAX_EVENT_BATCHSZ 512
 

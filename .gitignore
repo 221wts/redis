@@ -1,6 +1,8 @@
 .*.swp
 *.o
 *.log
+.idea
+deps
 dump.rdb
 redis-benchmark
 redis-check-aof

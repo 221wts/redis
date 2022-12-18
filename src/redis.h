@@ -424,6 +424,7 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REDIS_LRU_BITS 24
 #define REDIS_LRU_CLOCK_MAX ((1<<REDIS_LRU_BITS)-1) /* Max value of obj->lru */
 #define REDIS_LRU_CLOCK_RESOLUTION 1000 /* LRU clock resolution in ms */
+// 定义redis对象的格式
 typedef struct redisObject {
     unsigned type:4;
     unsigned encoding:4;
@@ -663,7 +664,7 @@ struct clusterState;
 #ifdef _AIX
 #undef hz
 #endif
-
+/* 全局的redis信息 */
 struct redisServer {
     /* General */
     pid_t pid;                  /* Main process pid. */
