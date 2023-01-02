@@ -33,6 +33,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* 哈希表的实现。
+ *
+ * 这个文件实现了内存中对任意元素的发insert/del/replace/find/get操作。
+ * 如果需要使用两倍大小的表哈希表将自动调整大小；冲突将通过链接处理。有关更多信息，请参阅源代码…
+ */
+
 #include <stdint.h>
 
 #ifndef __DICT_H
@@ -42,6 +48,7 @@
 #define DICT_ERR 1
 
 /* Unused arguments generate annoying warnings... */
+// 未使用的参数会产生恼人的警告…
 #define DICT_NOTUSED(V) ((void) V)
 
 typedef struct dictEntry {
@@ -55,6 +62,7 @@ typedef struct dictEntry {
     struct dictEntry *next;
 } dictEntry;
 
+// 这个里面定义了一些方法，应该是用来实现c里面的结构体的方法的。
 typedef struct dictType {
     unsigned int (*hashFunction)(const void *key);
     void *(*keyDup)(void *privdata, const void *key);
@@ -66,6 +74,7 @@ typedef struct dictType {
 
 /* This is our hash table structure. Every dictionary has two of this as we
  * implement incremental rehashing, for the old to the new table. */
+// 下面的是哈希表的结构。对于从旧表到新表的扩容，每个字典都会进行两倍进行扩容。
 typedef struct dictht {
     dictEntry **table;
     unsigned long size;
@@ -77,7 +86,9 @@ typedef struct dict {
     dictType *type;
     void *privdata;
     dictht ht[2];
+    // 如果 rehashidx == -1 则当前没有在进行重散列
     long rehashidx; /* rehashing not in progress if rehashidx == -1 */
+    // 当前运行的迭代器的个数
     int iterators; /* number of iterators currently running */
 } dict;
 
@@ -85,18 +96,22 @@ typedef struct dict {
  * dictAdd, dictFind, and other functions against the dictionary even while
  * iterating. Otherwise it is a non safe iterator, and only dictNext()
  * should be called while iterating. */
+// 如果safe设置为1，这是一个安全迭代器，这意味着即使在迭代时，您也可以针对字典调用dictAdd、dictFind和其他函数。
+// 否则它是非安全的，仅仅可以在迭代的时候调用dictNext()
 typedef struct dictIterator {
     dict *d;
     long index;
     int table, safe;
     dictEntry *entry, *nextEntry;
     /* unsafe iterator fingerprint for misuse detection. */
+    // 用于错误检测的不安全迭代器指纹。
     long long fingerprint;
 } dictIterator;
 
 typedef void (dictScanFunction)(void *privdata, const dictEntry *de);
 
 /* This is the initial size of every hash table */
+// 对于每个哈希表的初始的大小。
 #define DICT_HT_INITIAL_SIZE     4
 
 /* ------------------------------- Macros ------------------------------------*/
@@ -178,6 +193,7 @@ unsigned int dictGetHashFunctionSeed(void);
 unsigned long dictScan(dict *d, unsigned long v, dictScanFunction *fn, void *privdata);
 
 /* Hash table types */
+// 哈希表类型。
 extern dictType dictTypeHeapStringCopyKey;
 extern dictType dictTypeHeapStrings;
 extern dictType dictTypeHeapStringCopyKeyValue;

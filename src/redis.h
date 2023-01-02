@@ -527,6 +527,7 @@ typedef struct readyList {
 
 /* With multiplexing we need to take per-client state.
  * Clients are taken in a linked list. */
+// 对于多路复用，我们需要获取每个客户端状态。客户端被放在一个链表中。
 typedef struct redisClient {
     uint64_t id;            /* Client incremental unique ID. */
     int fd;

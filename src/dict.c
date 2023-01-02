@@ -33,6 +33,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* 哈希表的实现。
+ * 这个文件中实现了内存中的可以通过 insert/del/replace/find/get 操作任意元素的哈希表。
+ *
+ */
+
 #include "fmacros.h"
 
 #include <stdio.h>

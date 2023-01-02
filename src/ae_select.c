@@ -35,6 +35,7 @@ typedef struct aeApiState {
     fd_set rfds, wfds;
     /* We need to have a copy of the fd sets as it's not safe to reuse
      * FD sets after select(). */
+    // 我们需要一个fd的备用集合，因为在select()过后再次使用原有的fd集合并不安全
     fd_set _rfds, _wfds;
 } aeApiState;
 
@@ -50,6 +51,7 @@ static int aeApiCreate(aeEventLoop *eventLoop) {
 
 static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
     /* Just ensure we have enough room in the fd_set type. */
+    // 确保在fd_set类型中有足够的类型。
     if (setsize >= FD_SETSIZE) return -1;
     return 0;
 }

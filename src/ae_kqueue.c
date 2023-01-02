@@ -39,6 +39,7 @@ typedef struct aeApiState {
 } aeApiState;
 
 static int aeApiCreate(aeEventLoop *eventLoop) {
+    // 为 aeEventLoop 设置apistate字段(关于polling APi的特定字段)
     aeApiState *state = zmalloc(sizeof(aeApiState));
 
     if (!state) return -1;
@@ -58,6 +59,7 @@ static int aeApiCreate(aeEventLoop *eventLoop) {
 }
 
 static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
+    // 对apidata字段重新设置
     aeApiState *state = eventLoop->apidata;
 
     state->events = zrealloc(state->events, sizeof(struct kevent)*setsize);
@@ -65,6 +67,7 @@ static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
 }
 
 static void aeApiFree(aeEventLoop *eventLoop) {
+    // 释放apidata中的数据
     aeApiState *state = eventLoop->apidata;
 
     close(state->kqfd);
@@ -73,6 +76,7 @@ static void aeApiFree(aeEventLoop *eventLoop) {
 }
 
 static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
+    // kqfd是一个int类型，但是这里的EV_SET是从哪里来的。另外这里的kevent是什么东西,看起来可以调用方法。这点挺奇怪的
     aeApiState *state = eventLoop->apidata;
     struct kevent ke;
 
@@ -88,6 +92,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
 }
 
 static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
+    // 这个和上面的方法的不同仅在于EV_DELETE参数
     aeApiState *state = eventLoop->apidata;
     struct kevent ke;
 
@@ -104,7 +109,7 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int mask) {
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
     int retval, numevents = 0;
-
+    // 这边还是要看一下这里的kevent方法到底是干什么的
     if (tvp != NULL) {
         struct timespec timeout;
         timeout.tv_sec = tvp->tv_sec;
