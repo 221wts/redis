@@ -35,7 +35,7 @@
 
 /* 哈希表的实现。
  * 这个文件中实现了内存中的可以通过 insert/del/replace/find/get 操作任意元素的哈希表。
- *
+ * 如果需要两倍大小的表，哈希表将自动调整大小，冲突将通过链接处理。更多的信息需要阅读源代码。
  */
 
 #include "fmacros.h"
@@ -60,6 +60,11 @@
  * Note that even when dict_can_resize is set to 0, not all resizes are
  * prevented: a hash table is still allowed to grow if the ratio between
  * the number of elements and the buckets > dict_force_resize_ratio. */
+/* 通过使用dictEnableResize()和dictDisableResize()，我们可以开启和关闭哈希表的伸缩。
+ * 这一点对于redis来说非常的重要，因为redis中，采用的是cow技术，同时我们还不希望在执行保存操作的时候带来太多的内存变动。
+ *
+ * 要注意的是，当dict_can_resize设置为0的时候，并不意味着所有的伸缩都不进行了
+ */
 static int dict_can_resize = 1;
 static unsigned int dict_force_resize_ratio = 5;
 
