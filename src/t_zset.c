@@ -57,6 +57,7 @@
  * from tail to head, useful for ZREVRANGE. */
 
 #include "server.h"
+#include <stdlib.h>
 #include <math.h>
 
 /*-----------------------------------------------------------------------------
@@ -78,6 +79,7 @@ zskiplistNode *zslCreateNode(int level, double score, sds ele) {
 
 /* Create a new skiplist. */
 zskiplist *zslCreate(void) {
+    printf("****** enter zslCreatef ******");
     int j;
     zskiplist *zsl;
 
@@ -91,6 +93,7 @@ zskiplist *zslCreate(void) {
     }
     zsl->header->backward = NULL;
     zsl->tail = NULL;
+    printf("创建一个跳跃表，表头节点为:%p \n", zsl->header);
     return zsl;
 }
 
@@ -154,6 +157,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
      * caller of zslInsert() should test in the hash table if the element is
      * already inside or not. */
     level = zslRandomLevel();
+    printf("创建的节点的高度为:%d\n", level);
     if (level > zsl->level) {
         for (i = zsl->level; i < level; i++) {
             rank[i] = 0;
@@ -162,14 +166,24 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, sds ele) {
         }
         zsl->level = level;
     }
+    printf("设置前的update和rank列表中存储的值为:\n");
+    for(int idx=0;idx<zsl->level;idx++){
+        printf("\tidx=%d;\trank=%d;\tupdate[idx]=%p\n", idx, rank[idx], update[idx]);
+    }
     x = zslCreateNode(level,score,ele);
+    printf("生成的节点的信息为:地址=%p，分数=%f\n", x, score);
     for (i = 0; i < level; i++) {
+//        printf("i=%d\tupdate[i]=%p\tupdate[i]->level[i].forward=%p update[i]->level[i].span=%lu\trank[0]=%d\trank[i]=%d\n",
+//               i,
+//               (void *)update[i], (void *)update[i]->level[i].forward, update[i]->level[i].span,
+//               rank[0], rank[i]);
         x->level[i].forward = update[i]->level[i].forward;
         update[i]->level[i].forward = x;
 
         /* update span covered by update[i] as x is inserted here */
         x->level[i].span = update[i]->level[i].span - (rank[0] - rank[i]);
         update[i]->level[i].span = (rank[0] - rank[i]) + 1;
+        printf("\t下一个节点:%p, 下一步跨度:%lu\n", x->level[i].forward, x->level[i].span);
     }
 
     /* increment span for untouched levels */
